@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { OrtoniReportConfig } from "ortoni-report";
 import dotenv from "dotenv";
 import * as os from "os";
+import path from "path";
 dotenv.config();
 const reportConfig: OrtoniReportConfig = {
   open: process.env.CI ? "never" : "always",
@@ -45,7 +46,7 @@ export default defineConfig({
 
   //  Existing HTML report + Allure added
   reporter: [
-    ["ortoni-report", reportConfig],
+    // ["ortoni-report", reportConfig],
     ["html"],
     ['allure-playwright']
     // existing

@@ -22,7 +22,7 @@ test.describe("Add ally webhook tests", () => {
     await sideMenuPage.openWebhooks();
   });
 
-  test.only('Add new webhook with dynamic URL and select modules', async ({ page }) => {
+  test('Add new webhook with dynamic URL and select modules', async ({ page }) => {
 
     
     const webhookPage = new WebhookPage(page);
