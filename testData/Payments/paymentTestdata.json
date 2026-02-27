@@ -1,0 +1,36 @@
+{
+  "baseURL": "https://api.qat.anddone.com/secure/paymentintents/",
+  "paymentWidgetURL": "https://paymentwidget.qat.anddone.com/?token=",
+
+  "headers": {
+    "x-api-key": "1fJGlFgVIGLQWqsjik9SLm3dsaGfubLEeXc+9IZ/zT0=",
+    "x-app-key": "KvoMzo8y",
+    "x-version": "2.3",
+    "Origin": "https://api.qat.anddone.com/"
+  },
+
+  "contentType": "application/json",
+
+  "requestBody": {
+    "saveForFuture": false,
+    "title": "PlaywrightAutoTitle",
+
+    "shortDescription": "shortDescription",
+    "enablePremiumFinance": false,
+    "paymentDescription": "paymentDescription",
+    "expiresIn": "300000",
+    "Customers": [
+      {
+        "FirstName": "Vera",
+        "LastName": "twovirtual",
+        "Email": "API@yopmail.com",
+        "Phone": "8123293250"
+      }
+    ],
+    "AdditionalDetailsPreference": 2,
+    "intent": {
+      "paymentTypes": ["ACH", "CreditCard", "DebitCard"]
+    },
+    "amount": 1300.0
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "baseURL": "https://api.uat.anddone.com/secure/paymentintents/",
+  "paymentWidgetURL": "https://paymentwidget.uat.anddone.com/?token=",
+  
+  "headers": {
+    "x-api-key": "0PCeajL8Bh66HO4tiGnbFVtMJ+dbC1Ub+BgLv9hvshQ=",
+    "x-app-key": "Z8gBGnxo",
+    "x-version": "2.3",
+    "Origin": "https://api.uat.anddone.com/"
+  },
+
+  "contentType": "application/json",
+
+  "requestBody": {
+    "saveForFuture": false,
+    "title": "PlaywrightAutoTitle",
+    
+    "shortDescription": "shortDescription",
+    "enablePremiumFinance": false,
+    "paymentDescription": "paymentDescription",
+    "expiresIn": "300000",
+    "Customers": [
+      {
+        "FirstName": "Vera",
+        "LastName": "twovirtual",
+        "Email": "API@yopmail.com",
+        "Phone": "8123293250"
+      }
+    ],
+    "AdditionalDetailsPreference": 2,
+    "intent": {
+      "paymentTypes": ["ACH", "CreditCard", "DebitCard"]
+    },
+    "amount": 1300.00
+  }
+}

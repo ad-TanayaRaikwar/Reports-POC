@@ -1,0 +1,18 @@
+[
+  {
+    "username": "AlexSmith4889",
+    "password": "123#Qwertyuiop"
+  },
+  {
+    "username": "Zbook1201",
+    "password": "333#Qwertyuiop"
+  },
+  {
+    "username": "invalidUser",
+    "password": "wrongPass"
+  },
+  {
+    "username": "TaylorVerma89",
+    "password": "111#Qwertyuiop"
+  }
+]
