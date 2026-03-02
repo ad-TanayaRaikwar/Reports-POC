@@ -48,7 +48,11 @@ export default defineConfig({
   reporter: [
     // ["ortoni-report", reportConfig],
     ["html"],
-    ['allure-playwright']
+    ['allure-playwright'],
+    // ['monocart-reporter', {  
+    //         name: "My Test Report",
+    //         outputFile: './monocart-report/index.html'
+    // }]
     // existing
   ],
 
