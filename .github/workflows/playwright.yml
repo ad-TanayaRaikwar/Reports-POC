@@ -80,9 +80,9 @@ jobs:
       #     ls -la my-report || echo "my-report not found"
 
       # ── Install Allure CLI ────────────────────────────────────────────────
-      # - name: Install Allure CLI
-      #   if: always()
-      #   run: npm install -g allure-commandline --save-dev
+      - name: Install Allure CLI
+        if: always()
+        run: npm install -g allure-commandline --save-dev
 
       # ── Generate Allure HTML report from results ──────────────────────────
       - name: Generate Allure Report
