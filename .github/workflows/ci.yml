@@ -38,6 +38,14 @@ jobs:
         run: npx playwright test
         continue-on-error: true
 
+      # ── Setup Java (required by Allure CLI) ───────────────────────────────
+      - name: Setup Java
+        if: always()
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       # ── Install Allure CLI ────────────────────────────────────────────────
       - name: Install Allure CLI
         run: npm install -g allure-commandline
@@ -83,8 +91,26 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Artifact | Retention |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-----------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 📊 \`allure-report\` – Open \`index.html\` locally to view | 20 days |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 \`allure-report\` – Full interactive HTML report | 20 days |" >> $GITHUB_STEP_SUMMARY
           echo "| 📁 \`allure-results\` – Raw results for re-processing | 20 days |" >> $GITHUB_STEP_SUMMARY
           echo "| 🎭 \`playwright-artifacts\` – Traces, screenshots, videos | 20 days |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> Download the \`allure-report\` artifact, unzip it, and open \`index.html\` in your browser." >> $GITHUB_STEP_SUMMARY
+          echo "### 👇 How to view the Allure report locally" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download and unzip the \`allure-report\` artifact" >> $GITHUB_STEP_SUMMARY
+          echo "2. Open a terminal inside the unzipped folder" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run one of the following commands:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option A – Allure CLI (if installed)**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "allure open ." >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option B – npx serve (no install needed)**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "npx serve ." >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "Then open http://localhost:3000 in your browser" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "> ⚠️ **Do not** double-click \`index.html\` directly — Allure requires an HTTP server to load correctly." >> $GITHUB_STEP_SUMMARY
