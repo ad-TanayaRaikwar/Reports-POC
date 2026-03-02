@@ -85,9 +85,9 @@ jobs:
       #   run: npm install -g allure-commandline --save-dev
 
       # ── Generate Allure HTML report from results ──────────────────────────
-      # - name: Generate Allure Report
-      #   if: always()
-      #   run: allure generate allure-results --clean -o allure-report
+      - name: Generate Allure Report
+        if: always()
+        run: allure generate allure-results --clean -o allure-report
 
       # ── Upload Allure HTML report ─────────────────────────────────────────
       - name: Upload Allure Report

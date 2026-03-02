@@ -1,0 +1,96 @@
+name: Allure Report CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout source code ──────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── Setup Node.js ─────────────────────────────────────────────────────
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      # ── Install project dependencies ──────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Install Playwright browsers ───────────────────────────────────────
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      # ── Clean stale results before test run ───────────────────────────────
+      - name: Clean allure-results
+        run: rm -rf allure-results && mkdir -p allure-results
+
+      # ── Run Playwright tests ──────────────────────────────────────────────
+      - name: Run Playwright tests
+        run: npx playwright test
+        continue-on-error: true
+
+      # ── Upload raw allure results ─────────────────────────────────────────
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results
+          retention-days: 20
+
+      # ── Fetch gh-pages history for trend charts ───────────────────────────
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      # ── Generate Allure report with history ───────────────────────────────
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        id: allure-report
+        with:
+          allure_results: allure-results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
+          keep_reports: 20
+
+      # ── Deploy report to GitHub Pages ─────────────────────────────────────
+      - name: Deploy report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+
+      # ── Upload HTML report as artifact ────────────────────────────────────
+      - name: Upload Allure HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-report
+          path: allure-report
+          retention-days: 20
+
+      # ── Upload Playwright traces/screenshots on failure ────────────────────
+      - name: Upload Playwright Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-artifacts
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 20
