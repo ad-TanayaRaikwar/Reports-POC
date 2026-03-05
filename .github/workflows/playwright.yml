@@ -63,6 +63,29 @@ jobs:
             cp -r gh-pages/history/* allure-results/history/
           fi
 
+      # ── Inject Custom UI Branding ───────────────────────────────────────
+      - name: Customize Allure UI
+        if: always()
+        run: |
+          # 1. Create the destination folder for the logo to prevent copy errors
+          mkdir -p allure-report/plugin/custom-logo/
+          
+          # 2. Copy the logo using the singular 'plugin' folder path
+          cp allure-custom/AndDoneLogo.png allure-report/plugin/custom-logo/
+          
+          # 3. Inject the header CSS
+          cat allure-custom/custom.css >> allure-report/styles.css
+          
+          # 4. Inject the custom theme CSS
+          cat allure-custom/custom-theme.css >> allure-report/styles.css        
+      #     cp allure-custom/AndDoneLogo.png allure-report/plugins/custom-logo/
+      #     cat allure-custom/custom.css >> allure-report/styles.css
+
+      # # ── Inject Modern Ortoni-style Theme ────────────────────────────────
+      # - name: Apply Custom CSS Theme
+      #   if: always()
+      #   run: cat custom-theme.css >> allure-report/styles.css
+
       # ── Generate Allure Report (with history) ──────────────────
       - name: Generate Allure Report
         run: allure generate allure-results --clean -o allure-report

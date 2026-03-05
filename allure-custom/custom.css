@@ -1,0 +1,10 @@
+/* Change header background color */
+.app__header {
+    background-color: #2c3e50 !important; 
+}
+/* Resize your custom logo to fit the header */
+.app__header .allure-logo {
+    content: url("plugin/custom-logo/AndDoneLogo.png") !important;
+    height: 40px !important;
+    margin-left: 10px;
+}
