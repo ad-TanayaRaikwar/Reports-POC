@@ -57,7 +57,14 @@ jobs:
 
       # ── Generate Allure v3 Report ─────────────────────────────────────
       - name: Generate Allure Report
-        run: allure generate allure-results -o allure-report --name "Allure Report"
+        # run: allure generate allure-results -o allure-report --name "Allure Report"
+        run: |
+          allure generate allure-results \
+            -o allure-report \
+            --name "Ally Portal Test Report" \
+            --history-path ./test-history/allure-history.jsonl \
+            --append-history \
+            --history-limit 20
 
       # ── Inject Custom Branding (AFTER generate) ───────────────────────
       - name: Customize Allure UI
