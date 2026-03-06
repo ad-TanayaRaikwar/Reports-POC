@@ -46,7 +46,7 @@ export default defineConfig({
 
   //  Existing HTML report + Allure added
   reporter: [
-    // ["ortoni-report", reportConfig],
+    ["ortoni-report", reportConfig],
     ["html"],
     ['allure-playwright'],
     // ['monocart-reporter', {  

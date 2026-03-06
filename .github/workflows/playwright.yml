@@ -33,21 +33,22 @@ jobs:
         run: npx playwright test
         continue-on-error: true
 
-      # ── Setup Java (Required for Allure CLI) ─────────────────────────────
+      # ── Setup Java (Required for Allure CLI v3) ───────────────────────
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Install Allure CLI
-        run: npm install -g allure-commandline
+      # ── Install Allure v3 CLI ─────────────────────────────────────────
+      - name: Install Allure v3 CLI
+        run: |
+          curl -Lo allure.zip https://github.com/allure-framework/allure3/releases/latest/download/allure-commandline.zip
+          unzip allure.zip -d allure3
+          sudo mv allure3/allure-*/bin/allure /usr/local/bin/allure
+          allure --version   # verify v3.x
 
-      # ============================================================
-      # 🔥 ALLURE HISTORY SUPPORT
-      # ============================================================
-
-      # ── Checkout gh-pages branch if exists ─────────────────────
+      # ── Checkout gh-pages branch if exists ────────────────────────
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
@@ -63,37 +64,27 @@ jobs:
             cp -r gh-pages/history/* allure-results/history/
           fi
 
-      # ── Inject Custom UI Branding ───────────────────────────────────────
-      - name: Customize Allure UI
-        if: always()
-        run: |
-          # 1. Create the destination folder for the logo to prevent copy errors
-          mkdir -p allure-report/plugin/custom-logo/
-          
-          # 2. Copy the logo using the singular 'plugin' folder path
-          cp allure-custom/AndDoneLogo.png allure-report/plugin/custom-logo/
-          
-          # 3. Inject the header CSS
-          cat allure-custom/custom.css >> allure-report/styles.css
-          
-          # 4. Inject the custom theme CSS
-          cat allure-custom/custom-theme.css >> allure-report/styles.css        
-      #     cp allure-custom/AndDoneLogo.png allure-report/plugins/custom-logo/
-      #     cat allure-custom/custom.css >> allure-report/styles.css
-
-      # # ── Inject Modern Ortoni-style Theme ────────────────────────────────
-      # - name: Apply Custom CSS Theme
-      #   if: always()
-      #   run: cat custom-theme.css >> allure-report/styles.css
-
-      # ── Generate Allure Report (with history) ──────────────────
+      # ── Generate Allure v3 Report ─────────────────────────────────────
       - name: Generate Allure Report
         run: allure generate allure-results --clean -o allure-report
 
-      # ============================================================
-      # 🚀 DEPLOY TO GITHUB PAGES (gh-pages branch)
-      # ============================================================
+      # ── Inject Custom Branding (AFTER generate) ───────────────────────
+      - name: Customize Allure UI
+        if: always()
+        run: |
+          # Logo injection (v3 plugin path)
+          mkdir -p allure-report/plugins/custom-logo/
+          cp allure-custom/AndDoneLogo.png allure-report/plugins/custom-logo/
 
+          # CSS injection
+          if [ -f "allure-report/styles.css" ]; then
+            cat allure-custom/custom.css >> allure-report/styles.css
+            cat allure-custom/custom-theme.css >> allure-report/styles.css
+          else
+            echo "styles.css not found - skipping CSS injection"
+          fi
+
+      # ── Deploy to GitHub Pages ────────────────────────────────────────
       - name: Deploy to gh-pages
         run: |
           git config --global user.name "github-actions"
@@ -105,14 +96,11 @@ jobs:
           git init
           git checkout -b gh-pages
           git add .
-          git commit -m "Deploy Allure report with history"
+          git commit -m "Deploy Allure v3 report with history"
 
           git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
 
-      # ============================================================
-      # 📦 Upload Artifacts (Optional but kept)
-      # ============================================================
-
+      # ── Upload Artifacts ──────────────────────────────────────────────
       - name: Upload Allure Report
         uses: actions/upload-artifact@v4
         if: always()
