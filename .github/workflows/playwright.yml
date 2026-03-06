@@ -33,31 +33,26 @@ jobs:
         run: npx playwright test
         continue-on-error: true
 
-      # ✅ Install Allure v3
+      # ── Install Allure v3 CLI ─────────────────────────────────────────────
       - name: Install Allure v3 CLI
         run: |
           npm install -g allure@latest
           allure --version
 
-      # ── Checkout gh-pages branch if exists ────────────────────────
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-        continue-on-error: true
-
-      # ── Copy previous history into new results ─────────────────
-      - name: Copy Allure history
+      # ── Restore history.jsonl from gh-pages (v3 single-file history) ─────
+      - name: Restore Allure history
         run: |
-          if [ -d "gh-pages/history" ]; then
-            mkdir -p allure-results/history
-            cp -r gh-pages/history/* allure-results/history/
+          git fetch origin gh-pages 2>/dev/null || echo "⚠️ gh-pages branch not found (first run)"
+          if git show origin/gh-pages:test-history/allure-history.jsonl > /tmp/allure-history.jsonl 2>/dev/null; then
+            mkdir -p test-history
+            mv /tmp/allure-history.jsonl test-history/allure-history.jsonl
+            echo "✅ History restored — $(wc -l < test-history/allure-history.jsonl) previous runs found"
+          else
+            echo "⚠️ No history file found — this is the first run"
           fi
 
-      # ── Generate Allure v3 Report ─────────────────────────────────────
+      # ── Generate Allure v3 Report (reads + appends history.jsonl) ────────
       - name: Generate Allure Report
-        # run: allure generate allure-results -o allure-report --name "Allure Report"
         run: |
           allure generate allure-results \
             -o allure-report \
@@ -66,7 +61,18 @@ jobs:
             --append-history \
             --history-limit 20
 
-      # ── Inject Custom Branding (AFTER generate) ───────────────────────
+      # ── Copy updated history.jsonl into report folder for deployment ──────
+      - name: Persist Allure history
+        run: |
+          if [ -f "test-history/allure-history.jsonl" ]; then
+            mkdir -p allure-report/test-history
+            cp test-history/allure-history.jsonl allure-report/test-history/allure-history.jsonl
+            echo "✅ history.jsonl persisted — $(wc -l < test-history/allure-history.jsonl) total runs"
+          else
+            echo "⚠️ No history.jsonl to persist"
+          fi
+
+      # ── Inject Custom Branding (AFTER generate) ───────────────────────────
       - name: Customize Allure UI
         if: always()
         run: |
@@ -75,9 +81,11 @@ jobs:
           if [ -f "allure-report/styles.css" ]; then
             cat allure-custom/custom.css >> allure-report/styles.css
             cat allure-custom/custom-theme.css >> allure-report/styles.css
+          else
+            echo "⚠️ styles.css not found — skipping CSS injection"
           fi
 
-      # ── Deploy to GitHub Pages ────────────────────────────────────────
+      # ── Deploy report + history.jsonl to gh-pages ─────────────────────────
       - name: Deploy to gh-pages
         run: |
           git config --global user.name "github-actions"
@@ -87,9 +95,10 @@ jobs:
           git init
           git checkout -b gh-pages
           git add .
-          git commit -m "Deploy Allure v3 report"
+          git commit -m "Deploy Allure v3 report with history"
           git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
 
+      # ── Upload Artifacts ──────────────────────────────────────────────────
       - name: Upload Allure Report
         uses: actions/upload-artifact@v4
         if: always()
