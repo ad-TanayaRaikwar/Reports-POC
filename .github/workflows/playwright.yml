@@ -33,20 +33,11 @@ jobs:
         run: npx playwright test
         continue-on-error: true
 
-      # ── Setup Java (Required for Allure CLI v3) ───────────────────────
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      # ── Install Allure v3 CLI ─────────────────────────────────────────
+      # ✅ Install Allure v3
       - name: Install Allure v3 CLI
         run: |
-          curl -Lo allure.zip https://github.com/allure-framework/allure3/releases/latest/download/allure-commandline.zip
-          unzip allure.zip -d allure3
-          sudo mv allure3/allure-*/bin/allure /usr/local/bin/allure
-          allure --version   # verify v3.x
+          npm install -g allure@latest
+          allure --version
 
       # ── Checkout gh-pages branch if exists ────────────────────────
       - name: Checkout gh-pages branch
@@ -72,16 +63,11 @@ jobs:
       - name: Customize Allure UI
         if: always()
         run: |
-          # Logo injection (v3 plugin path)
           mkdir -p allure-report/plugins/custom-logo/
           cp allure-custom/AndDoneLogo.png allure-report/plugins/custom-logo/
-
-          # CSS injection
           if [ -f "allure-report/styles.css" ]; then
             cat allure-custom/custom.css >> allure-report/styles.css
             cat allure-custom/custom-theme.css >> allure-report/styles.css
-          else
-            echo "styles.css not found - skipping CSS injection"
           fi
 
       # ── Deploy to GitHub Pages ────────────────────────────────────────
@@ -89,18 +75,14 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
           cd allure-report
           touch .nojekyll
-
           git init
           git checkout -b gh-pages
           git add .
-          git commit -m "Deploy Allure v3 report with history"
-
+          git commit -m "Deploy Allure v3 report"
           git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages
 
-      # ── Upload Artifacts ──────────────────────────────────────────────
       - name: Upload Allure Report
         uses: actions/upload-artifact@v4
         if: always()
