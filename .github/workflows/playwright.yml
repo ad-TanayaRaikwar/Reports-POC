@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,6 +27,26 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # -----------------------------------------------------------
+      # 1. SETUP & RESTORE HISTORY
+      # -----------------------------------------------------------
+      - name: Create history directory
+        run: mkdir -p allure-history
+
+      - name: Restore Allure History
+        uses: actions/cache@v4
+        with:
+          path: allure-history/history.jsonl
+          # We use run_id to always create a NEW cache entry at the end of the run
+          key: allure-history-${{ github.run_id }}
+          # restore-keys tells GitHub to grab the most recent cache starting with this prefix
+          restore-keys: |
+            allure-history-
+
+      # -----------------------------------------------------------
+      # 2. RUN TESTS
+      # -----------------------------------------------------------  
+
       - name: Run Playwright tests
         run: npx playwright test
         continue-on-error: true
@@ -36,33 +57,38 @@ jobs:
           allure --version
 
       # ── Restore history.jsonl from gh-pages ───────────────────
-      - name: Restore Allure history
-        run: |
-          git fetch origin gh-pages 2>/dev/null || echo "First run — no gh-pages yet"
-          if git show origin/gh-pages:allure-history/history.jsonl > /tmp/history.jsonl 2>/dev/null; then
-            mkdir -p allure-history
-            mv /tmp/history.jsonl allure-history/history.jsonl
-            echo "Restored — $(wc -l < allure-history/history.jsonl) previous runs"
-          else
-            echo "No history yet — first run, Allure will create the file"
-          fi
+      # - name: Restore Allure history
+      #   run: |
+      #     git fetch origin gh-pages 2>/dev/null || echo "First run — no gh-pages yet"
+      #     if git show origin/gh-pages:allure-history/history.jsonl > /tmp/history.jsonl 2>/dev/null; then
+      #       mkdir -p allure-history
+      #       mv /tmp/history.jsonl allure-history/history.jsonl
+      #       echo "Restored — $(wc -l < allure-history/history.jsonl) previous runs"
+      #     else
+      #       echo "No history yet — first run, Allure will create the file"
+      #     fi
 
-      # ── Generate report ───────────────────────────────────────
+      # -----------------------------------------------------------
+      # 3. GENERATE REPORT
+      # -----------------------------------------------------------
       - name: Generate Allure Report
-        run: allure generate allure-results
+        # run: allure generate allure-results
+        run: allure generate ./allure-results -o ./allure-report --clean
 
       # ── Copy updated history.jsonl into report for deployment ─
-      - name: Persist Allure history
-        run: |
-          if [ -f "allure-history/history.jsonl" ]; then
-            mkdir -p allure-report/allure-history
-            cp allure-history/history.jsonl allure-report/allure-history/history.jsonl
-            echo "$(wc -l < allure-history/history.jsonl) total runs persisted"
-          else
-            echo "No history.jsonl found to persist"
-          fi
+      # - name: Persist Allure history
+      #   run: |
+      #     if [ -f "allure-history/history.jsonl" ]; then
+      #       mkdir -p allure-report/allure-history
+      #       cp allure-history/history.jsonl allure-report/allure-history/history.jsonl
+      #       echo "$(wc -l < allure-history/history.jsonl) total runs persisted"
+      #     else
+      #       echo "No history.jsonl found to persist"
+      #     fi
 
-      # ── STEP 4: Deploy report + history to gh-pages ───────────────────
+      # -----------------------------------------------------------
+      # 4. Deploy & Upload Artifacts
+      # -----------------------------------------------------------
       - name: Deploy to gh-pages
         run: |
           git config --global user.name "github-actions"
@@ -91,10 +117,10 @@ jobs:
           path: allure-results
           retention-days: 30
 
-      - name: Upload Playwright Artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-artifacts
-          path: test-results
-          retention-days: 30
+      # - name: Upload Playwright Artifacts
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: playwright-artifacts
+      #     path: test-results
+      #     retention-days: 30

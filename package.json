@@ -15,7 +15,7 @@
     "@types/node": "^24.10.9",
     "allure-js-commons": "^3.5.0",
     "allure-playwright": "^3.5.0",
-    "ortoni-report": "^4.0.1"
+    "ortoni-report": "^4.0.8"
   },
   "scripts": {},
   "dependencies": {

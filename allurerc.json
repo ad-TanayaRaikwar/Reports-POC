@@ -2,12 +2,12 @@
   "name": "Ally Portal Test Report",
   "output": "./allure-report",
   "historyPath": "./allure-history/history.jsonl",
+  "appendHistory": true,
   "historyLimit": 20,
   "plugins": {
     "awesome": {
       "options": {
         "reportName": "Ally Portal Test Report",
-        "logo": "./allure-custom/AndDoneLogo.png",
         "reportLanguage": "en",
         "singleFile": false
       }
