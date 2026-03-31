@@ -19,8 +19,6 @@
   },
   "scripts": {},
   "dependencies": {
-    "@anddone/adminportaltestautomation": "^1.3.4",
-    "@anddone/coretestautomation": "^1.0.7",
     "dotenv": "^17.2.3",
     "monocart-reporter": "^2.10.0"
   }
