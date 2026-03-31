@@ -1,0 +1,2 @@
+Navigating to: https://ally.qat.anddone.com/#/login
+Change Password page displayed successfully

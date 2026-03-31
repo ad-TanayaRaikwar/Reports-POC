@@ -1,0 +1,2 @@
+Navigating to: https://ally.qat.anddone.com/#/login
+✔ First row is not active, skipping deactivate action
