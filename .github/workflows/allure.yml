@@ -1,111 +1,94 @@
-name: Allure Report
+name: Allure CI Test
 
 on:
   push:
     branches: [ main ]
-  pull_request:
 
 permissions:
-  contents: write # Required to push to gh-pages
+  contents: write 
 
 jobs:
-  test:
+  test-and-report:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
 
-    # -----------------------------------------------------------
-    # 1. SETUP & RESTORE HISTORY (Single Cache Step)
-    # -----------------------------------------------------------
-    - name: Create history directory
-      run: mkdir -p .allure-history
+      # -----------------------------------------------------------
+      # 1. DOWNLOAD PREVIOUS HISTORY FROM CACHE
+      # -----------------------------------------------------------
+      - name: Restore previous Allure 2 history
+        uses: actions/cache@v4
+        with:
+          path: cached-history
+          key: allure-history-${{ github.run_number }}
+          restore-keys: |
+            allure-history-
 
-    - name: Cache Allure history
-      uses: actions/cache@v4
-      with:
-        path: .allure-history/history.jsonl
-        key: allure-history-${{ github.run_number }}
-        restore-keys: |
-          allure-history-
+      # -----------------------------------------------------------
+      # 2. RUN TESTS (Generates the allure-results folder)
+      # -----------------------------------------------------------
+      - name: Run Playwright tests
+        run: npx playwright test
+        continue-on-error: true
 
-    # -----------------------------------------------------------
-    # 2. RUN TESTS
-    # -----------------------------------------------------------
-    - name: Execute tests
-      run: npx playwright test --retries=2
-      continue-on-error: true # Ensures we generate the report even if tests fail
+      # -----------------------------------------------------------
+      # 3. THE ALLURE 2 ROUTINE (Copy history -> results)
+      # -----------------------------------------------------------
+      - name: Copy history to results
+        if: always()
+        run: |
+          # Ensure the destination directory exists
+          mkdir -p allure-results/history
+          
+          # If we successfully downloaded previous history, copy it inside the results folder
+          if [ -d "cached-history/history" ]; then
+            cp -R cached-history/history/* allure-results/history/
+            echo "Successfully copied previous history into allure-results!"
+          else
+            echo "No previous history found. This must be the first run."
+          fi
 
-    # -----------------------------------------------------------
-    # 3. ADD METADATA & CATEGORIES
-    # -----------------------------------------------------------
-    - name: Create executor file
-      if: always()
-      run: |
-        cat <<EOF > allure-results/executor.json
-        {
-          "name": "GitHub Actions",
-          "type": "github",
-          "buildName": "Run ${{ github.run_number }}",
-          "buildOrder": ${{ github.run_number }},
-          "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        }
-        EOF
+      # -----------------------------------------------------------
+      # 4. GENERATE NEW REPORT
+      # -----------------------------------------------------------
+      - name: Install Allure CLI
+        if: always()
+        run: npm install -g allure-commandline@^2.0.0
 
-    - name: Add categories
-      if: always()
-      run: |
-        cat <<EOF > allure-results/categories.json
-        [
-          {
-            "name": "Assertion Failures",
-            "matchedStatuses": ["failed"]
-          },
-          {
-            "name": "Infrastructure Issues",
-            "messageRegex": ".*timeout.*"
-          },
-          {
-            "name": "Test Bugs",
-            "messageRegex": ".*null.*"
-          }
-        ]
-        EOF
+      - name: Generate Allure Report
+        if: always()
+        run: allure generate ./allure-results -o ./allure-report --clean
 
-    # -----------------------------------------------------------
-    # 4. GENERATE & DEPLOY
-    # -----------------------------------------------------------
-    - name: Install Allure v3 CLI
-      if: always()
-      run: npm install -g allure@latest
+      # -----------------------------------------------------------
+      # 5. SAVE NEW HISTORY FOR THE NEXT PIPELINE RUN
+      # -----------------------------------------------------------
+      - name: Save new history for cache
+        if: always()
+        run: |
+          mkdir -p cached-history
+          # Copy the newly generated history out of the report so the cache step can save it
+          cp -R allure-report/history cached-history/
 
-    - name: Generate Allure Report
-      if: always()
-      # Clean single-line command. Relies on allure.config.js for the history path.
-      run: allure generate ./allure-results --output ./allure-report
-
-    - name: Upload report artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-report
-        path: allure-report
-
-    - name: Deploy report
-      if: always()
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: allure-report
+      # -----------------------------------------------------------
+      # 6. DEPLOYMENT
+      # -----------------------------------------------------------
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
