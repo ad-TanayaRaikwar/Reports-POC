@@ -1,0 +1,109 @@
+name: Allure Report
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install dependencies
+      run: npm ci
+
+    # Restore Allure history
+    - name: Restore Allure history
+      uses: actions/cache@v4
+      with:
+        path: .allure-history
+        key: allure-history
+        restore-keys: allure-history
+
+    # Run tests with retries
+    - name: Execute tests
+      run: npx playwright test --retries=2
+
+    # Add executor metadata
+    - name: Create executor file
+      if: always()
+      run: |
+        mkdir -p allure-results
+
+        cat <<EOF > allure-results/executor.json
+        {
+          "name": "GitHub Actions",
+          "type": "github",
+          "buildName": "${{ github.run_number }}",
+          "buildOrder": ${{ github.run_number }},
+          "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        }
+        EOF
+
+    # Failure classification
+    - name: Add categories
+      if: always()
+      run: |
+
+        cat <<EOF > allure-results/categories.json
+        [
+          {
+            "name": "Assertion Failures",
+            "matchedStatuses": ["failed"]
+          },
+          {
+            "name": "Infrastructure Issues",
+            "messageRegex": ".*timeout.*"
+          },
+          {
+            "name": "Test Bugs",
+            "messageRegex": ".*null.*"
+          }
+        ]
+        EOF
+
+    # Generate Allure 3 report
+    - name: Generate Allure Report
+      if: always()
+      run: |
+
+        npx allure generate \
+        allure-results \
+        --output allure-report \
+        --history-path .allure-history \
+
+    # Save updated history
+    - name: Save Allure history
+      if: always()
+      uses: actions/cache@v4
+      with:
+        path: .allure-history
+        key: allure-history-${{ github.run_number }}
+
+    # Upload report artifact
+    - name: Upload report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-report
+        path: allure-report
+
+    # Publish report
+    - name: Deploy report
+      if: always()
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: allure-report
