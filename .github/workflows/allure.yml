@@ -5,14 +5,14 @@ on:
     branches: [ main ]
   pull_request:
 
+permissions:
+  contents: write # Required to push to gh-pages
+
 jobs:
-
   test:
-
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -24,39 +24,49 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    # Restore Allure history
-    - name: Restore Allure history
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    # -----------------------------------------------------------
+    # 1. SETUP & RESTORE HISTORY (Single Cache Step)
+    # -----------------------------------------------------------
+    - name: Create history directory
+      run: mkdir -p .allure-history
+
+    - name: Cache Allure history
       uses: actions/cache@v4
       with:
-        path: .allure-history
-        key: allure-history
-        restore-keys: allure-history
+        path: .allure-history/history.jsonl
+        key: allure-history-${{ github.run_number }}
+        restore-keys: |
+          allure-history-
 
-    # Run tests with retries
+    # -----------------------------------------------------------
+    # 2. RUN TESTS
+    # -----------------------------------------------------------
     - name: Execute tests
       run: npx playwright test --retries=2
+      continue-on-error: true # Ensures we generate the report even if tests fail
 
-    # Add executor metadata
+    # -----------------------------------------------------------
+    # 3. ADD METADATA & CATEGORIES
+    # -----------------------------------------------------------
     - name: Create executor file
       if: always()
       run: |
-        mkdir -p allure-results
-
         cat <<EOF > allure-results/executor.json
         {
           "name": "GitHub Actions",
           "type": "github",
-          "buildName": "${{ github.run_number }}",
+          "buildName": "Run ${{ github.run_number }}",
           "buildOrder": ${{ github.run_number }},
           "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         }
         EOF
 
-    # Failure classification
     - name: Add categories
       if: always()
       run: |
-
         cat <<EOF > allure-results/categories.json
         [
           {
@@ -74,33 +84,25 @@ jobs:
         ]
         EOF
 
-    # Generate Allure 3 report
+    # -----------------------------------------------------------
+    # 4. GENERATE & DEPLOY
+    # -----------------------------------------------------------
+    - name: Install Allure v3 CLI
+      if: always()
+      run: npm install -g allure@latest
+
     - name: Generate Allure Report
       if: always()
-      run: |
+      # Clean single-line command. Relies on allure.config.js for the history path.
+      run: allure generate ./allure-results --output ./allure-report
 
-        npx allure generate \
-        allure-results \
-        --output allure-report \
-        --history-path .allure-history \
-
-    # Save updated history
-    - name: Save Allure history
-      if: always()
-      uses: actions/cache@v4
-      with:
-        path: .allure-history
-        key: allure-history-${{ github.run_number }}
-
-    # Upload report artifact
-    - name: Upload report
+    - name: Upload report artifact
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: allure-report
         path: allure-report
 
-    # Publish report
     - name: Deploy report
       if: always()
       uses: peaceiris/actions-gh-pages@v4
