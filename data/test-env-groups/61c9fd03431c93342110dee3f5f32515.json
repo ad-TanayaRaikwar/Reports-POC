@@ -1,1 +1,0 @@
-{"id":"61c9fd03431c93342110dee3f5f32515","fullName":"allyLogin/login.test.ts:70:8","name":"Verify that entering invalid username gives alert message on forgot password page @regression","status":"skipped","testResultsByEnv":{"default":"25ceb4e235367a413bca2d0c82b8c0f7"}}
