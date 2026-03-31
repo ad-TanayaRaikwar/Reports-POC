@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps || true
 
       # -----------------------------------------------------------
       # 1. SETUP & RESTORE HISTORY
@@ -73,7 +73,7 @@ jobs:
       # -----------------------------------------------------------
       - name: Generate Allure Report
         # run: allure generate allure-results
-        run: allure generate ./allure-results -o ./allure-report --clean
+        run: allure generate ./allure-results -o ./allure-report
 
       # ── Copy updated history.jsonl into report for deployment ─
       # - name: Persist Allure history
