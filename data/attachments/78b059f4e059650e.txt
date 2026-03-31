@@ -1,0 +1,8 @@
+Navigating to: https://ally.qat.anddone.com/#/login
+User Details: {
+  Username: '',
+  Phone: '--',
+  Email: '',
+  Address: '',
+  Password: 'Last modified on'
+}
