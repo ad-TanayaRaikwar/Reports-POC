@@ -1,0 +1,1 @@
+{"id":"9b7c9449ddce4498850233e274abb1e2","fullName":"allyUsers/AllyAddUser.test.ts:117:7","name":"Verify that a validation error appears when creating a user with an existing username.@smoke @regression","status":"passed","testResultsByEnv":{"default":"bca5346ccf70be4c923a1f57706da88a"}}
