@@ -18,7 +18,7 @@ test.describe("Login Module", () => {
   });
 
   // Negative test - invalid credentials (Regression)
-  test.skip("Login with invalid credentials @regression", async ({ page }) => {
+  test("Login with invalid credentials @regression", async ({ page }) => {
     test.setTimeout(60000); // Entire test timeout
 
     const loginPage = new LoginPage(page);
