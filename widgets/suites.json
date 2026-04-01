@@ -1,1 +1,1 @@
-{"total":1,"items":[{"uid":"31b3357c1caf5bd667e8c8253ee79240","name":"Ally_chromium","statistic":{"failed":0,"broken":0,"skipped":3,"passed":21,"unknown":0,"total":24}}]}
+{"total":1,"items":[{"uid":"31b3357c1caf5bd667e8c8253ee79240","name":"Ally_chromium","statistic":{"failed":1,"broken":0,"skipped":2,"passed":21,"unknown":0,"total":24}}]}
