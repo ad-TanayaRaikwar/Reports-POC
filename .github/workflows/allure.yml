@@ -1,4 +1,4 @@
-name: Allure CI Test
+name: Allure Report Test
 
 on:
   workflow_dispatch:
@@ -22,7 +22,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
         with:
@@ -34,10 +33,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      # -----------------------------------------------------------
-      # 1. DOWNLOAD PREVIOUS HISTORY FROM CACHE
-      # -----------------------------------------------------------
-      - name: Restore previous Allure 2 history
+      - name: Restore previous execution history
         uses: actions/cache@v4
         with:
           path: cached-history
@@ -45,16 +41,26 @@ jobs:
           restore-keys: |
             allure-history-
 
-      # -----------------------------------------------------------
-      # 2. RUN TESTS (Generates the allure-results folder)
-      # -----------------------------------------------------------
       - name: Run Playwright tests
         run: npx playwright test
         continue-on-error: true
 
-      # -----------------------------------------------------------
-      # 3. THE ALLURE 2 ROUTINE (Copy history -> results)
-      # -----------------------------------------------------------
+      - name: Add Executor Info
+        if: always()
+        run: |
+          mkdir -p allure-results
+          cat <<EOF > allure-results/executor.json
+          {
+            "name": "GitHub Actions",
+            "type": "github",
+            "buildName": "Playwright Run #${{ github.run_number }}",
+            "buildOrder": "${{ github.run_number }}",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "reportName": "Allure Report",
+            "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          }
+          EOF
+
       - name: Copy history to results
         if: always()
         run: |
@@ -69,9 +75,6 @@ jobs:
             echo "No previous history found. This must be the first run."
           fi
 
-      # -----------------------------------------------------------
-      # 4. GENERATE NEW REPORT
-      # -----------------------------------------------------------
       - name: Install Allure CLI
         if: always()
         run: npm install -g allure-commandline@^2.0.0
@@ -80,9 +83,6 @@ jobs:
         if: always()
         run: allure generate ./allure-results -o ./allure-report --clean
 
-      # -----------------------------------------------------------
-      # 5. SAVE NEW HISTORY FOR THE NEXT PIPELINE RUN
-      # -----------------------------------------------------------
       - name: Save new history for cache
         if: always()
         run: |
@@ -90,9 +90,6 @@ jobs:
           # Copy the newly generated history out of the report so the cache step can save it
           cp -R allure-report/history cached-history/
 
-      # -----------------------------------------------------------
-      # 6. DEPLOYMENT
-      # -----------------------------------------------------------
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         if: always()

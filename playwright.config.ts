@@ -48,12 +48,14 @@ export default defineConfig({
   reporter: [
     ["ortoni-report", reportConfig],
     ["html"],
-    ['allure-playwright'],
-    // ['monocart-reporter', {  
-    //         name: "My Test Report",
-    //         outputFile: './monocart-report/index.html'
-    // }]
-    // existing
+    ['allure-playwright', {
+      environmentInfo: {
+        OS: os.platform(),
+        Node_Version: process.version,
+        Test_Environment: process.env.CURRENT_ENV || 'QAT',
+        Framework: 'Playwright'
+      }
+    }],
   ],
 
   use: {
