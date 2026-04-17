@@ -2,10 +2,6 @@ name: Playwright Reports CI
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-  pull_request:
 
 permissions:
   contents: write
@@ -72,7 +68,7 @@ jobs:
         run: |
           rm -rf allure-results
           rm -rf allure-report
-          rm -rf ortoni-report
+          rm -rf my-report
           rm -rf playwright-report
           rm -rf test-results
 
@@ -98,7 +94,7 @@ jobs:
             "buildOrder": "${{ github.run_number }}",
             "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "reportName": "Allure Report",
-            "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+            "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/allure/"
           }
           EOF
 
@@ -168,11 +164,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Ortoni-Report
-          path: ortoni-report
+          path: my-report/
           retention-days: 7
 
       # -------------------------------------------------
-      # Upload Screenshots / Videos / Traces
+      # Upload Test Results
       # -------------------------------------------------
       - name: Upload Test Results
         if: always()
@@ -183,12 +179,57 @@ jobs:
           retention-days: 7
 
       # -------------------------------------------------
-      # Deploy Allure Report to GitHub Pages
+      # Prepare Combined Reports for GitHub Pages
       # -------------------------------------------------
-      - name: Deploy Allure Report
+      - name: Prepare Hosted Reports
+        if: always()
+        run: |
+          mkdir -p gh-pages-dir
+          
+          # Copy reports into subdirectories
+          if [ -d "allure-report" ]; then cp -R allure-report gh-pages-dir/allure; fi
+          if [ -d "my-report" ]; then cp -R my-report gh-pages-dir/ortoni; fi
+          
+          # Generate a styled landing page
+          cat <<EOF > gh-pages-dir/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Test Execution Reports</title>
+              <style>
+                  body { font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background-color: #f8f9fa; color: #333; }
+                  .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+                  h1 { margin-top: 0; color: #2c3e50; }
+                  .btn-group { margin-top: 20px; display: flex; gap: 15px; justify-content: center; }
+                  a { text-decoration: none; padding: 12px 24px; font-weight: 600; border-radius: 6px; transition: all 0.2s; }
+                  .btn-allure { background: #3498db; color: white; }
+                  .btn-allure:hover { background: #2980b9; }
+                  .btn-ortoni { background: #8e44ad; color: white; }
+                  .btn-ortoni:hover { background: #732d91; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Test Automation Reports</h1>
+                  <p>Select a reporting dashboard to view the latest test execution details.</p>
+                  <div class="btn-group">
+                      <a href="./allure/index.html" class="btn-allure">View Allure Report</a>
+                      <a href="./ortoni/index.html" class="btn-ortoni">View Ortoni Report</a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      # -------------------------------------------------
+      # Deploy Combined Reports to GitHub Pages
+      # -------------------------------------------------
+      - name: Deploy Reports to GH Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-report
+          publish_dir: gh-pages-dir
