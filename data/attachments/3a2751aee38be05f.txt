@@ -1,0 +1,8 @@
+Navigating to: https://ally.qat.anddone.com/#/login
+User Details: {
+  Username: 'AlexSmith4889',
+  Phone: '(902) 830-3090',
+  Email: 'Morton.21@yopmail.com',
+  Address: '233 5th Ave Ext, Johnstown, New York, Herkimer, NY, 13351, USA',
+  Password: 'Last modified on Feb 9, 2026'
+}
