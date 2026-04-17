@@ -1,46 +1,63 @@
-name: Allure + Ortoni Report Test
+name: Playwright Reports CI
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
 
 permissions:
-  contents: write 
+  contents: write
 
 jobs:
   test-and-report:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
+      # -------------------------------------------------
+      # Checkout
+      # -------------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # -------------------------------------------------
+      # Node Setup
+      # -------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      # -------------------------------------------------
+      # Install Dependencies
+      # -------------------------------------------------
+      - name: Install Dependencies
         run: npm ci
 
-      # -----------------------------------
+      # -------------------------------------------------
       # Cache Playwright Browsers
-      # -----------------------------------
+      # -------------------------------------------------
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-pw-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-pw-
+            ${{ runner.os }}-playwright-
 
+      # -------------------------------------------------
+      # Install Browsers
+      # -------------------------------------------------
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # -----------------------------------
+      # -------------------------------------------------
       # Restore Allure History
-      # -----------------------------------
-      - name: Restore previous execution history
+      # -------------------------------------------------
+      - name: Restore Allure History
         uses: actions/cache@v4
         with:
           path: cached-history
@@ -48,16 +65,27 @@ jobs:
           restore-keys: |
             allure-history-
 
-      # -----------------------------------
-      # Run Playwright Tests
-      # -----------------------------------
+      # -------------------------------------------------
+      # Clean Previous Reports
+      # -------------------------------------------------
+      - name: Clean Old Reports
+        run: |
+          rm -rf allure-results
+          rm -rf allure-report
+          rm -rf ortoni-report
+          rm -rf playwright-report
+          rm -rf test-results
+
+      # -------------------------------------------------
+      # Run Tests (Single Worker = Stable Ortoni Report)
+      # -------------------------------------------------
       - name: Run Playwright Tests
-        run: npx playwright test
+        run: npx playwright test --workers=1 --retries=1
         continue-on-error: true
 
-      # -----------------------------------
-      # Add Allure Executor Info
-      # -----------------------------------
+      # -------------------------------------------------
+      # Add Allure Executor Metadata
+      # -------------------------------------------------
       - name: Add Executor Info
         if: always()
         run: |
@@ -66,7 +94,7 @@ jobs:
           {
             "name": "GitHub Actions",
             "type": "github",
-            "buildName": "Playwright Run #${{ github.run_number }}",
+            "buildName": "Run #${{ github.run_number }}",
             "buildOrder": "${{ github.run_number }}",
             "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "reportName": "Allure Report",
@@ -74,67 +102,90 @@ jobs:
           }
           EOF
 
-      # -----------------------------------
-      # Copy Allure History
-      # -----------------------------------
-      - name: Copy history to results
+      # -------------------------------------------------
+      # Restore History into Results
+      # -------------------------------------------------
+      - name: Restore History Into Allure Results
         if: always()
         run: |
           mkdir -p allure-results/history
-
           if [ -d "cached-history/history" ]; then
             cp -R cached-history/history/* allure-results/history/
           else
             echo "No previous history found."
           fi
 
-      # -----------------------------------
+      # -------------------------------------------------
       # Install Allure CLI
-      # -----------------------------------
+      # -------------------------------------------------
       - name: Install Allure CLI
         if: always()
         run: npm install -g allure-commandline@2.29.0
 
-      # -----------------------------------
+      # -------------------------------------------------
       # Generate Allure Report
-      # -----------------------------------
+      # -------------------------------------------------
       - name: Generate Allure Report
         if: always()
-        run: allure generate ./allure-results -o ./allure-report --clean
+        run: allure generate allure-results -o allure-report --clean
 
-      # -----------------------------------
-      # Save Allure History
-      # -----------------------------------
-      - name: Save new history for cache
+      # -------------------------------------------------
+      # Save History for Next Run
+      # -------------------------------------------------
+      - name: Save New History
         if: always()
         run: |
           mkdir -p cached-history
           cp -R allure-report/history cached-history/
 
-      # -----------------------------------
-      # Upload Allure Report Artifact
-      # -----------------------------------
+      # -------------------------------------------------
+      # Upload Raw Playwright Report
+      # -------------------------------------------------
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Playwright-Report
+          path: playwright-report
+          retention-days: 7
+
+      # -------------------------------------------------
+      # Upload Allure Report
+      # -------------------------------------------------
       - name: Upload Allure Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Allure-Report
           path: allure-report
+          retention-days: 7
 
-      # -----------------------------------
-      # Upload Ortoni Report Artifact
-      # -----------------------------------
+      # -------------------------------------------------
+      # Upload Ortoni Report
+      # -------------------------------------------------
       - name: Upload Ortoni Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Ortoni-Report
           path: ortoni-report
+          retention-days: 7
 
-      # -----------------------------------
-      # Deploy Allure to GitHub Pages
-      # -----------------------------------
-      - name: Deploy Allure Report to GitHub Pages
+      # -------------------------------------------------
+      # Upload Screenshots / Videos / Traces
+      # -------------------------------------------------
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test-Results
+          path: test-results
+          retention-days: 7
+
+      # -------------------------------------------------
+      # Deploy Allure Report to GitHub Pages
+      # -------------------------------------------------
+      - name: Deploy Allure Report
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
