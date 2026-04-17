@@ -1,4 +1,4 @@
-name: Allure Report Test
+name: Allure + Ortoni Report Test
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ permissions:
 jobs:
   test-and-report:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -17,11 +18,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      # -----------------------------------
+      # Cache Playwright Browsers
+      # -----------------------------------
       - name: Cache Playwright Browsers
         uses: actions/cache@v4
         with:
@@ -30,9 +34,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pw-
 
-      - name: Install Playwright browsers
+      - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # -----------------------------------
+      # Restore Allure History
+      # -----------------------------------
       - name: Restore previous execution history
         uses: actions/cache@v4
         with:
@@ -41,10 +48,16 @@ jobs:
           restore-keys: |
             allure-history-
 
-      - name: Run Playwright tests
+      # -----------------------------------
+      # Run Playwright Tests
+      # -----------------------------------
+      - name: Run Playwright Tests
         run: npx playwright test
         continue-on-error: true
 
+      # -----------------------------------
+      # Add Allure Executor Info
+      # -----------------------------------
       - name: Add Executor Info
         if: always()
         run: |
@@ -61,38 +74,69 @@ jobs:
           }
           EOF
 
+      # -----------------------------------
+      # Copy Allure History
+      # -----------------------------------
       - name: Copy history to results
         if: always()
         run: |
-          # Ensure the destination directory exists
           mkdir -p allure-results/history
-          
-          # If we successfully downloaded previous history, copy it inside the results folder
+
           if [ -d "cached-history/history" ]; then
             cp -R cached-history/history/* allure-results/history/
-            echo "Successfully copied previous history into allure-results!"
           else
-            echo "No previous history found. This must be the first run."
+            echo "No previous history found."
           fi
 
+      # -----------------------------------
+      # Install Allure CLI
+      # -----------------------------------
       - name: Install Allure CLI
         if: always()
-        run: npm install -g allure-commandline@^2.0.0
+        run: npm install -g allure-commandline@2.29.0
 
+      # -----------------------------------
+      # Generate Allure Report
+      # -----------------------------------
       - name: Generate Allure Report
         if: always()
         run: allure generate ./allure-results -o ./allure-report --clean
 
+      # -----------------------------------
+      # Save Allure History
+      # -----------------------------------
       - name: Save new history for cache
         if: always()
         run: |
           mkdir -p cached-history
-          # Copy the newly generated history out of the report so the cache step can save it
           cp -R allure-report/history cached-history/
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      # -----------------------------------
+      # Upload Allure Report Artifact
+      # -----------------------------------
+      - name: Upload Allure Report
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Allure-Report
+          path: allure-report
+
+      # -----------------------------------
+      # Upload Ortoni Report Artifact
+      # -----------------------------------
+      - name: Upload Ortoni Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ortoni-Report
+          path: ortoni-report
+
+      # -----------------------------------
+      # Deploy Allure to GitHub Pages
+      # -----------------------------------
+      - name: Deploy Allure Report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
