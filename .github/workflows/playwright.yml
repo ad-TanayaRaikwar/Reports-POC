@@ -71,9 +71,10 @@ jobs:
           rm -rf my-report
           rm -rf playwright-report
           rm -rf test-results
+          rm -rf gh-pages-dir
 
       # -------------------------------------------------
-      # Run Tests (Single Worker = Stable Ortoni Report)
+      # Run Tests
       # -------------------------------------------------
       - name: Run Playwright Tests
         run: npx playwright test --workers=1 --retries=1
@@ -135,7 +136,68 @@ jobs:
           cp -R allure-report/history cached-history/
 
       # -------------------------------------------------
-      # Upload Raw Playwright Report
+      # Compare Allure vs Ortoni Report Sizes
+      # -------------------------------------------------
+      - name: Compare Report Sizes
+        if: always()
+        run: |
+          node -e "
+          const fs=require('fs');
+          const path=require('path');
+
+          function size(dir){
+            if(!fs.existsSync(dir)) return 0;
+            let total=0;
+            for(const file of fs.readdirSync(dir)){
+              const full=path.join(dir,file);
+              const stat=fs.statSync(full);
+              total += stat.isDirectory() ? size(full) : stat.size;
+            }
+            return total;
+          }
+
+          function mb(bytes){
+            return (bytes / 1024 / 1024).toFixed(2);
+          }
+
+          const allure=size('./allure-report');
+          const ortoni=size('./my-report');
+
+          const winner =
+            allure === 0 && ortoni === 0 ? 'No reports found'
+            : allure < ortoni ? 'Allure (smaller)'
+            : ortoni < allure ? 'Ortoni (smaller)'
+            : 'Tie';
+
+          console.log('====================================');
+          console.log('Report Size Comparison');
+          console.log('====================================');
+          console.log('Allure Report Size: ' + mb(allure) + ' MB');
+          console.log('Ortoni Report Size: ' + mb(ortoni) + ' MB');
+          console.log('Winner: ' + winner);
+          console.log('====================================');
+
+          fs.writeFileSync(
+            'report-comparison.txt',
+            'Allure Report Size: ' + mb(allure) + ' MB\\n' +
+            'Ortoni Report Size: ' + mb(ortoni) + ' MB\\n' +
+            'Winner: ' + winner + '\\n'
+          );
+          "
+
+      # -------------------------------------------------
+      # Upload Comparison Result
+      # -------------------------------------------------
+      - name: Upload Comparison Result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Report-Comparison
+          path: report-comparison.txt
+          retention-days: 7
+
+      # -------------------------------------------------
+      # Upload Playwright Report
       # -------------------------------------------------
       - name: Upload Playwright Report
         if: always()
@@ -179,18 +241,16 @@ jobs:
           retention-days: 7
 
       # -------------------------------------------------
-      # Prepare Combined Reports for GitHub Pages
+      # Prepare Hosted Reports
       # -------------------------------------------------
       - name: Prepare Hosted Reports
         if: always()
         run: |
           mkdir -p gh-pages-dir
-          
-          # Copy reports into subdirectories
+
           if [ -d "allure-report" ]; then cp -R allure-report gh-pages-dir/allure; fi
           if [ -d "my-report" ]; then cp -R my-report gh-pages-dir/ortoni; fi
-          
-          # Generate a styled landing page
+
           cat <<EOF > gh-pages-dir/index.html
           <!DOCTYPE html>
           <html lang="en">
@@ -224,7 +284,7 @@ jobs:
           EOF
 
       # -------------------------------------------------
-      # Deploy Combined Reports to GitHub Pages
+      # Deploy Reports
       # -------------------------------------------------
       - name: Deploy Reports to GH Pages
         if: always()
